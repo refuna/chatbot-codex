@@ -28,5 +28,5 @@
 - Pull requests should describe the user-facing impact, list backend/frontend touchpoints, note any migration steps (new env vars, re-ingestion), and include UI screenshots or curl examples for API changes.
 
 ## Configuration & Secrets
-- Store secrets in a root `.env` file; at minimum set `ANTHROPIC_API_KEY` before running the backend.
+- Store secrets in a root `.env` file; at minimum set `OPENAI_API_KEY` before running the backend.
 - Do not commit `.env`, API keys, or anything under `backend/chroma_db/`. Provide redacted samples in PRs when discussing configuration.
