@@ -16,7 +16,7 @@ class RAGSystem:
         # Initialize core components
         self.document_processor = DocumentProcessor(config.CHUNK_SIZE, config.CHUNK_OVERLAP)
         self.vector_store = VectorStore(config.CHROMA_PATH, config.EMBEDDING_MODEL, config.MAX_RESULTS)
-        self.ai_generator = AIGenerator(config.ANTHROPIC_API_KEY, config.ANTHROPIC_MODEL)
+        self.ai_generator = AIGenerator(config.OPENAI_API_KEY, config.OPENAI_MODEL)
         self.session_manager = SessionManager(config.MAX_HISTORY)
         
         # Initialize search tools
@@ -110,25 +110,30 @@ class RAGSystem:
         Returns:
             Tuple of (response, sources list - empty for tool-based approach)
         """
-        # Create prompt for the AI with clear instructions
-        prompt = f"""Answer this question about course materials: {query}"""
-        
-        # Get conversation history if session exists
-        history = None
-        if session_id:
-            history = self.session_manager.get_conversation_history(session_id)
-        
-        # Generate response using AI with tools
-        response = self.ai_generator.generate_response(
-            query=prompt,
-            conversation_history=history,
-            tools=self.tool_manager.get_tool_definitions(),
-            tool_manager=self.tool_manager
-        )
-        
-        # Get sources from the search tool
+        # Run semantic search to gather relevant context for the LLM
+        context = self.search_tool.execute(query=query)
         sources = self.tool_manager.get_last_sources()
-
+        
+        # Decide how to proceed based on search outcome
+        lowered_context = context.lower() if context else ""
+        if lowered_context.startswith("search error"):
+            response = "Course search is currently unavailable. Please try again later."
+            sources = []
+        elif lowered_context.startswith("no relevant content"):
+            response = "I couldn't find relevant course material for that request. Try rephrasing or adding more documents."
+            sources = []
+        else:
+            # Get conversation history if session exists
+            history = None
+            if session_id:
+                history = self.session_manager.get_conversation_history(session_id)
+            
+            response = self.ai_generator.generate_response(
+                query=query,
+                conversation_history=history,
+                context=context if context else None
+            )
+        
         # Reset sources after retrieving them
         self.tool_manager.reset_sources()
         
@@ -136,7 +141,6 @@ class RAGSystem:
         if session_id:
             self.session_manager.add_exchange(session_id, query, response)
         
-        # Return response with sources from tool searches
         return response, sources
     
     def get_course_analytics(self) -> Dict:

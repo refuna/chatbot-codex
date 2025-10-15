@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional, Protocol
+from typing import Dict, Any, Optional
 from abc import ABC, abstractmethod
 from vector_store import VectorStore, SearchResults
 
@@ -138,6 +138,10 @@ class ToolManager:
             return f"Tool '{tool_name}' not found"
         
         return self.tools[tool_name].execute(**kwargs)
+
+    def list_tools(self) -> list:
+        """List registered tool names"""
+        return list(self.tools.keys())
     
     def get_last_sources(self) -> list:
         """Get sources from the last search operation"""
